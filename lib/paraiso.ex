@@ -244,7 +244,7 @@ defmodule Paraiso do
   あるpropで検証失敗した場合その時点で検証処理は打ち切られる。
 
   """
-  @spec process(map(), [prop()]) :: {:ok, map()} | {:error, atom() | list[atom()], atom()}
+  @spec process(map(), [prop()]) :: {:ok, map()} | {:error, atom() | list[atom() | integer()], atom()}
   def process(_params = %{}, []) do
     {:ok, %{}}
   end
