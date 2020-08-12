@@ -28,6 +28,7 @@ defmodule Paraiso.MixProject do
     [
       maintainers: ["Takeshi Horiuchi"],
       licenses: ["MIT Lisence"],
+      description: "Validation and sanitization library for nested objects and arrays",
       links: %{"GitHub" => "https://github.com/keshihoriuchi/paraiso"}
     ]
   end
