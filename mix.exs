@@ -7,7 +7,8 @@ defmodule Paraiso.MixProject do
       version: "0.0.1",
       elixir: "~> 1.10",
       deps: deps(),
-      package: package()
+      package: package(),
+      docs: [main: "readme", extras: ["README.md"]]
     ]
   end
 

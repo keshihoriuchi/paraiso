@@ -1,8 +1,8 @@
 # Paraiso
 
-外部入力JSON 由来等のオブジェクトを宣言的にバリデートとサニタイズできる Elixir ライブラリ。ネストしたオブジェクトや配列も扱える。
+Validation and sanitization library of Elixir for nested objects and arrays
 
-## インストール
+## Install
 
 ```elixir
 def deps do
@@ -12,7 +12,7 @@ def deps do
 end
 ```
 
-## 使い方例
+## Usage Example
 
 ```elixir
 import Paraiso
@@ -94,6 +94,6 @@ sample = %{
 assert({:error, [:emails, 0, :email_address], :invalid} === Paraiso.process(sample, props))
 ```
 
-## API
+## API (Japanese Language)
 
 https://hexdocs.pm/paraiso/Paraiso.html
