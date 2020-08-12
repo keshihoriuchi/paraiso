@@ -36,6 +36,17 @@ defmodule Paraiso do
 
   ## validator
 
+  ### `:boolean`
+
+  trueまたはfalseであるか検証
+
+      iex> Paraiso.process(%{"a" => true}, [Paraiso.prop(:a, :required, :boolean)])
+      {:ok, %{a: true}}
+      iex> Paraiso.process(%{"a" => false}, [Paraiso.prop(:a, :required, :boolean)])
+      {:ok, %{a: false}}
+      iex> Paraiso.process(%{"a" => "foo"}, [Paraiso.prop(:a, :required, :int)])
+      {:error, :a, :invalid}
+
   ### `:int`
 
   整数型であるか検証
@@ -54,6 +65,16 @@ defmodule Paraiso do
       iex> Paraiso.process(%{"a" => 101}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
       {:error, :a, :invalid}
 
+  ### `{:string, {:range, min :: integer(), max :: integer()}}`
+
+  長さmin以上max未満の文字列であるか検証
+
+      iex> Paraiso.process(%{"a" => "abc"}, [Paraiso.prop(:a, :required, {:string, {:range, 0, 3}})])
+      {:ok, %{a: "abc"}}
+      iex> Paraiso.process(%{"a" => "abcd"}, [Paraiso.prop(:a, :required, {:string, {:range, 0, 3}})])
+      {:error, :a, :invalid}
+      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:string, {:range, 0, 3}})])
+      {:error, :a, :invalid}
 
   ### `{:string, {:regex, Regex.t()}}`
 
@@ -62,6 +83,8 @@ defmodule Paraiso do
       iex> Paraiso.process(%{"a" => "abc"}, [Paraiso.prop(:a, :required, {:string, {:regex, ~r/^abc/}})])
       {:ok, %{a: "abc"}}
       iex> Paraiso.process(%{"a" => "def"}, [Paraiso.prop(:a, :required, {:string, {:regex, ~r/^abc/}})])
+      {:error, :a, :invalid}
+      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:string, {:regex, ~r/^abc/}})])
       {:error, :a, :invalid}
 
   ### `String.t()`
@@ -163,8 +186,10 @@ defmodule Paraiso do
           name :: atom(),
           required_or_optional :: :required | {:optional, default :: term()},
           validator ::
-            :int
+            :boolean
+            | :int
             | {:int, {:range, min :: integer(), max :: integer()}}
+            | {:string, {:range, min :: integer(), max :: integer()}}
             | {:string, {:regex, Regex.t()}}
             | String.t()
             | {:string_literals, [String.t()]}
@@ -181,8 +206,10 @@ defmodule Paraiso do
   validatorを表す型。`prop/3`の引数validatorと同じ
   """
   @type validator ::
-          :int
+          :boolean
+          | :int
           | {:int, {:range, min :: integer(), max :: integer()}}
+          | {:string, {:range, min :: integer(), max :: integer()}}
           | {:string, {:regex, Regex.t()}}
           | String.t()
           | {:string_literals, [String.t()]}
@@ -254,6 +281,18 @@ defmodule Paraiso do
     end
   end
 
+  defp process_validator(name, true, :boolean, {:ok, acc}) do
+    {:cont, {:ok, Map.put(acc, name, true)}}
+  end
+
+  defp process_validator(name, false, :boolean, {:ok, acc}) do
+    {:cont, {:ok, Map.put(acc, name, false)}}
+  end
+
+  defp process_validator(name, _value, :boolean, _acc) do
+    {:halt, {:error, name, :invalid}}
+  end
+
   defp process_validator(name, value, :int, {:ok, acc}) when is_integer(value) do
     {:cont, {:ok, Map.put(acc, name, value)}}
   end
@@ -276,12 +315,34 @@ defmodule Paraiso do
     {:halt, {:error, name, :invalid}}
   end
 
-  defp process_validator(name, value, {:string, {:regex, regex}}, {:ok, acc}) do
+  defp process_validator(name, value, {:string, {:range, min, max}}, {:ok, acc})
+       when is_binary(value) do
+    len = String.length(value)
+
+    if min <= len and len <= max do
+      {:cont, {:ok, Map.put(acc, name, value)}}
+    else
+      {:halt, {:error, name, :invalid}}
+    end
+  end
+
+  defp process_validator(name, value, {:string, {:range, _min, _max}}, _acc)
+       when not is_binary(value) do
+    {:halt, {:error, name, :invalid}}
+  end
+
+  defp process_validator(name, value, {:string, {:regex, regex}}, {:ok, acc})
+       when is_binary(value) do
     if String.match?(value, regex) do
       {:cont, {:ok, Map.put(acc, name, value)}}
     else
       {:halt, {:error, name, :invalid}}
     end
+  end
+
+  defp process_validator(name, value, {:string, {:regex, _regex}}, _acc)
+       when not is_binary(value) do
+    {:halt, {:error, name, :invalid}}
   end
 
   defp process_validator(name, %{} = value, {:object, specs}, {:ok, acc}) do

@@ -1,10 +1,8 @@
 # Paraiso
 
-JSON等の外部入力由来のオブジェクトを宣言的にバリデートとサニタイズできるElixirライブラリ。ネストしたオブジェクトや配列も扱える。
+外部入力JSON 由来等のオブジェクトを宣言的にバリデートとサニタイズできる Elixir ライブラリ。ネストしたオブジェクトや配列も扱える。
 
-Paraiso is an Elixir library which can validate and sanitize JSON like objects declartively.
-
-## Installation
+## インストール
 
 ```elixir
 def deps do
@@ -14,5 +12,88 @@ def deps do
 end
 ```
 
-## Usage
+## 使い方例
 
+```elixir
+import Paraiso
+
+email_regex =
+  ~r/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+
+props = [
+  prop(:user_id, :required, {:string, {:regex, ~r/^[a-zA-Z0-9]{1,255}$/}}),
+  prop(:name, {:optional, ""}, {:string, {:range, 0, 255}}),
+  prop(
+    :emails,
+    {:optional, []},
+    {:array,
+     {:object,
+      [
+        {:email_address, :required, {:string, {:regex, email_regex}}},
+        {:is_primary, :required, :boolean},
+        {:notification, {:optional, false}, :boolean}
+      ]}}
+  )
+]
+
+## Success case
+sample = %{
+  "user_id" => "keshihoriuchi",
+  "name" => "Takeshi Horiuchi",
+  "emails" => [
+    %{
+      "email_address" => "keshihoriuchi@gmail.com",
+      "is_primary" => true,
+      "notification" => true
+    },
+    %{
+      "email_address" => "keshihoriuchi2@gmail.com",
+      "is_primary" => false
+    }
+  ]
+}
+
+{:ok, result} = Paraiso.process(sample, props)
+
+expect = %{
+  user_id: "keshihoriuchi",
+  name: "Takeshi Horiuchi",
+  emails: [
+    %{
+      email_address: "keshihoriuchi@gmail.com",
+      is_primary: true,
+      notification: true
+    },
+    %{
+      email_address: "keshihoriuchi2@gmail.com",
+      is_primary: false,
+      notification: false
+    }
+  ]
+}
+
+assert(result === expect)
+
+## Failure case
+sample = %{
+  "user_id" => "keshihoriuchi",
+  "name" => "Takeshi Horiuchi",
+  "emails" => [
+    %{
+      "email_address" => "invalid string",
+      "is_primary" => true,
+      "notification" => true
+    },
+    %{
+      "email_address" => "keshihoriuchi2@gmail.com",
+      "is_primary" => false
+    }
+  ]
+}
+
+assert({:error, [:emails, 0, :email_address], :invalid} === Paraiso.process(sample, props))
+```
+
+## API
+
+https://hexdocs.pm/paraiso/Paraiso.html
