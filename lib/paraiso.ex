@@ -153,6 +153,26 @@ defmodule Paraiso do
       ...> )
       {:error, [:a, 1, :b], :invalid}
 
+  ### `{:or, [validator()]}`
+
+  リスト中のいずれかで成功するか検証する
+
+      iex> Paraiso.process(
+      ...>   %{"a" => true},
+      ...>   [Paraiso.prop(:a, :required, {:or, [:boolean, "foo"]})]
+      ...> )
+      {:ok, %{a: true}}
+      iex> Paraiso.process(
+      ...>   %{"a" => "foo"},
+      ...>   [Paraiso.prop(:a, :required, {:or, [:boolean, "foo"]})]
+      ...> )
+      {:ok, %{a: "foo"}}
+      iex> Paraiso.process(
+      ...>   %{"a" => "bar"},
+      ...>   [Paraiso.prop(:a, :required, {:or, [:boolean, "foo"]})]
+      ...> )
+      {:error, :a, :invalid}
+
   ### `{:custom, (value :: term() -> :ok | {:error, reason :: atom()})}`
 
   関数で検証する。関数は成功なら`:ok`、失敗なら `{:error, <失敗理由> :: atom()}` を返す
@@ -195,6 +215,7 @@ defmodule Paraiso do
             | {:string_literals, [String.t()]}
             | {:object, [prop()]}
             | {:array, validator()}
+            | {:or, [validator()]}
             | {:custom, (value :: term() -> :ok | {:error, reason :: atom()})}
         ) :: prop()
   def prop(name, req_or_opt, validator) do
@@ -215,6 +236,7 @@ defmodule Paraiso do
           | {:string_literals, [String.t()]}
           | {:object, [prop()]}
           | {:array, validator()}
+          | {:or, [validator()]}
           | {:custom, (value :: term() -> :ok | {:error, reason :: atom()})}
 
   @typedoc """
@@ -244,7 +266,8 @@ defmodule Paraiso do
   あるpropで検証失敗した場合その時点で検証処理は打ち切られる。
 
   """
-  @spec process(map(), [prop()]) :: {:ok, map()} | {:error, atom() | list[atom()], atom()}
+  @spec process(map(), [prop()]) ::
+          {:ok, map()} | {:error, atom() | [atom() | integer()], atom()}
   def process(_params = %{}, []) do
     {:ok, %{}}
   end
@@ -270,14 +293,6 @@ defmodule Paraiso do
           :required -> {:halt, {:error, name, :required}}
           {:optional, default} -> {:cont, {:ok, Map.put(acc, name, default)}}
         end
-    end
-  end
-
-  defp process_validator(name, value, validator, {:ok, acc}) when is_binary(validator) do
-    if value == validator do
-      {:cont, {:ok, Map.put(acc, name, value)}}
-    else
-      {:halt, {:error, name, :invalid}}
     end
   end
 
@@ -345,6 +360,22 @@ defmodule Paraiso do
     {:halt, {:error, name, :invalid}}
   end
 
+  defp process_validator(name, value, validator, {:ok, acc}) when is_binary(validator) do
+    if value == validator do
+      {:cont, {:ok, Map.put(acc, name, value)}}
+    else
+      {:halt, {:error, name, :invalid}}
+    end
+  end
+
+  defp process_validator(name, value, {:string_literals, list}, {:ok, acc}) do
+    if :lists.member(value, list) do
+      {:cont, {:ok, Map.put(acc, name, value)}}
+    else
+      {:halt, {:error, name, :invalid}}
+    end
+  end
+
   defp process_validator(name, %{} = value, {:object, specs}, {:ok, acc}) do
     case process(value, specs) do
       {:ok, params} ->
@@ -386,12 +417,19 @@ defmodule Paraiso do
     end
   end
 
-  defp process_validator(name, _value, {:array, _validator}, _acc) do
-    {:halt, {:error, name, :invalid}}
-  end
+  defp process_validator(name, value, {:or, validators}, {:ok, acc}) do
+    result =
+      Enum.any?(validators, fn validator ->
+        case process_validator(:elem, value, validator, {:ok, %{}}) do
+          {:cont, {:ok, _result}} ->
+            true
 
-  defp process_validator(name, value, {:string_literals, list}, {:ok, acc}) do
-    if :lists.member(value, list) do
+          _else ->
+            false
+        end
+      end)
+
+    if result do
       {:cont, {:ok, Map.put(acc, name, value)}}
     else
       {:halt, {:error, name, :invalid}}
