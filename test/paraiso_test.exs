@@ -17,9 +17,9 @@ defmodule ParaisoTest do
         {:array,
          {:object,
           [
-            {:email_address, :required, {:string, {:regex, email_regex}}},
-            {:is_primary, :required, :boolean},
-            {:notification, {:optional, false}, :boolean}
+            prop(:email_address, :required, {:string, {:regex, email_regex}}),
+            prop(:is_primary, :required, :boolean),
+            prop(:notification, {:optional, false}, :boolean)
           ]}}
       )
     ]

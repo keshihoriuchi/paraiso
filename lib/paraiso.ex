@@ -198,7 +198,6 @@ defmodule Paraiso do
       ...>     )
       ...>   ]
       ...> )
-      {:ok, %{a: 1}}
       {:error, :a, :invalid}
 
   """
