@@ -58,7 +58,7 @@ defmodule Paraiso do
 
   ### `{:int, {:range, min :: integer(), max :: integer()}}`
 
-  min以上max未満の整数型であるか検証
+  min以上max以下の整数型であるか検証
 
       iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
       {:ok, %{a: 1}}
@@ -67,7 +67,7 @@ defmodule Paraiso do
 
   ### `{:string, {:range, min :: integer(), max :: integer()}}`
 
-  長さmin以上max未満の文字列であるか検証
+  長さmin以上max以下の文字列であるか検証
 
       iex> Paraiso.process(%{"a" => "abc"}, [Paraiso.prop(:a, :required, {:string, {:range, 0, 3}})])
       {:ok, %{a: "abc"}}
