@@ -44,7 +44,16 @@ defmodule Paraiso do
       {:ok, %{a: true}}
       iex> Paraiso.process(%{"a" => false}, [Paraiso.prop(:a, :required, :boolean)])
       {:ok, %{a: false}}
-      iex> Paraiso.process(%{"a" => "foo"}, [Paraiso.prop(:a, :required, :int)])
+      iex> Paraiso.process(%{"a" => "foo"}, [Paraiso.prop(:a, :required, :boolean)])
+      {:error, :a, :invalid}
+
+  ### `nil`
+
+  nilであるか検証
+
+      iex> Paraiso.process(%{"a" => nil}, [Paraiso.prop(:a, :required, nil)])
+      {:ok, %{a: nil}}
+      iex> Paraiso.process(%{"a" => false}, [Paraiso.prop(:a, :required, nil)])
       {:error, :a, :invalid}
 
   ### `:int`
@@ -60,20 +69,30 @@ defmodule Paraiso do
 
   min以上max以下の整数型であるか検証
 
-      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
-      {:ok, %{a: 1}}
+      iex> Paraiso.process(%{"a" => 0}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
+      {:ok, %{a: 0}}
+      iex> Paraiso.process(%{"a" => 100}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
+      {:ok, %{a: 100}}
+      iex> Paraiso.process(%{"a" => -1}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
+      {:error, :a, :invalid}
       iex> Paraiso.process(%{"a" => 101}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
+      {:error, :a, :invalid}
+      iex> Paraiso.process(%{"a" => "foo"}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
       {:error, :a, :invalid}
 
   ### `{:string, {:range, min :: integer(), max :: integer()}}`
 
   長さmin以上max以下の文字列であるか検証
 
-      iex> Paraiso.process(%{"a" => "abc"}, [Paraiso.prop(:a, :required, {:string, {:range, 0, 3}})])
+      iex> Paraiso.process(%{"a" => "a"}, [Paraiso.prop(:a, :required, {:string, {:range, 1, 3}})])
+      {:ok, %{a: "a"}}
+      iex> Paraiso.process(%{"a" => "abc"}, [Paraiso.prop(:a, :required, {:string, {:range, 1, 3}})])
       {:ok, %{a: "abc"}}
-      iex> Paraiso.process(%{"a" => "abcd"}, [Paraiso.prop(:a, :required, {:string, {:range, 0, 3}})])
+      iex> Paraiso.process(%{"a" => ""}, [Paraiso.prop(:a, :required, {:string, {:range, 1, 3}})])
       {:error, :a, :invalid}
-      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:string, {:range, 0, 3}})])
+      iex> Paraiso.process(%{"a" => "abcd"}, [Paraiso.prop(:a, :required, {:string, {:range, 1, 3}})])
+      {:error, :a, :invalid}
+      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:string, {:range, 1, 3}})])
       {:error, :a, :invalid}
 
   ### `{:string, {:regex, Regex.t()}}`
@@ -95,6 +114,8 @@ defmodule Paraiso do
       {:ok, %{a: "abc"}}
       iex> Paraiso.process(%{"a" => "def"}, [Paraiso.prop(:a, :required, "abc")])
       {:error, :a, :invalid}
+      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, "abc")])
+      {:error, :a, :invalid}
 
   ### `{:string_literals, [String.t()]}`
 
@@ -105,6 +126,8 @@ defmodule Paraiso do
       iex> Paraiso.process(%{"a" => "def"}, [Paraiso.prop(:a, :required, {:string_literals, ["abc", "def"]})])
       {:ok, %{a: "def"}}
       iex> Paraiso.process(%{"a" => "ghi"}, [Paraiso.prop(:a, :required, {:string_literals, ["abc", "def"]})])
+      {:error, :a, :invalid}
+      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:string_literals, ["abc", "def"]})])
       {:error, :a, :invalid}
 
   ### `{:object, [prop()]}`
@@ -206,6 +229,7 @@ defmodule Paraiso do
           required_or_optional :: :required | {:optional, default :: term()},
           validator ::
             :boolean
+            | nil
             | :int
             | {:int, {:range, min :: integer(), max :: integer()}}
             | {:string, {:range, min :: integer(), max :: integer()}}
@@ -228,6 +252,7 @@ defmodule Paraiso do
   @type validator ::
           :boolean
           | :int
+          | nil
           | {:int, {:range, min :: integer(), max :: integer()}}
           | {:string, {:range, min :: integer(), max :: integer()}}
           | {:string, {:regex, Regex.t()}}
@@ -304,6 +329,14 @@ defmodule Paraiso do
   end
 
   defp process_validator(name, _value, :boolean, _acc) do
+    {:halt, {:error, name, :invalid}}
+  end
+
+  defp process_validator(name, nil, nil, {:ok, acc}) do
+    {:cont, {:ok, Map.put(acc, name, nil)}}
+  end
+
+  defp process_validator(name, _value, nil, _acc) do
     {:halt, {:error, name, :invalid}}
   end
 
