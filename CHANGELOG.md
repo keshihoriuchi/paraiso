@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v0.0.3 (2020-08-17)
+
+### Enhancements
+
+* `nil` validator
+
+### Bug fixes
+
+* Documentation of `:range` validators
+* Handle non-array value on `:array` validator
+
 ## v0.0.2 (2020-08-13)
 
 ### Enhancements
