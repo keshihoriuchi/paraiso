@@ -175,6 +175,11 @@ defmodule Paraiso do
       ...>   [Paraiso.prop(:a, :required, {:array, {:object, [Paraiso.prop(:b, :required, :int)]}})]
       ...> )
       {:error, [:a, 1, :b], :invalid}
+      iex> Paraiso.process(
+      ...>   %{"a" => "foo"},
+      ...>   [Paraiso.prop(:a, :required, {:array, {:object, [Paraiso.prop(:b, :required, :int)]}})]
+      ...> )
+      {:error, :a, :invalid}
 
   ### `{:or, [validator()]}`
 
@@ -447,6 +452,10 @@ defmodule Paraiso do
       {array, _counter} ->
         {:cont, {:ok, Map.put(acc, name, array)}}
     end
+  end
+
+  defp process_validator(name, _value, {:array, _validator}, _acc) do
+    {:halt, {:error, name, :invalid}}
   end
 
   defp process_validator(name, value, {:or, validators}, {:ok, acc}) do
