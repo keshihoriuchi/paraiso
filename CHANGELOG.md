@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v0.0.4 (2020-09-17)
+
+### Enhancements
+
+* `:object` validator
+* Allow `:optional` parameter not having default value
+
 ## v0.0.3 (2020-08-17)
 
 ### Enhancements
