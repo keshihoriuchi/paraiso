@@ -21,7 +21,9 @@ defmodule ParaisoTest do
             prop(:is_primary, :required, :boolean),
             prop(:notification, {:optional, false}, :boolean)
           ]}}
-      )
+      ),
+      prop(:options, :optional, :object),
+      prop(:options2, :optional, :object)
     ]
 
     ## Success case
@@ -38,7 +40,11 @@ defmodule ParaisoTest do
           "email_address" => "keshihoriuchi2@gmail.com",
           "is_primary" => false
         }
-      ]
+      ],
+      "options" => %{
+        "foo" => "bar",
+        "fizz" => "buzz"
+      }
     }
 
     {:ok, result} = Paraiso.process(sample, props)
@@ -57,7 +63,11 @@ defmodule ParaisoTest do
           is_primary: false,
           notification: false
         }
-      ]
+      ],
+      options: %{
+        "foo" => "bar",
+        "fizz" => "buzz"
+      }
     }
 
     assert(result === expect)
