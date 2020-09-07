@@ -14,7 +14,7 @@ defmodule Paraiso do
 
   ## required_or_optional
 
-  `:required` or `{:optional, default :: term()}`
+  `:required` or `{:optional, default :: term()} or :optional`
 
   ### `:required`
 
@@ -33,6 +33,15 @@ defmodule Paraiso do
       {:ok, %{a: 1}}
       iex> Paraiso.process(%{"b" => 1}, [Paraiso.prop(:a, {:optional, 0}, :int)])
       {:ok, %{a: 0}}
+
+  ### `:optional`
+
+  オプション属性。省略されていた場合は補完されない
+
+      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :optional, :int)])
+      {:ok, %{a: 1}}
+      iex> Paraiso.process(%{"b" => 1}, [Paraiso.prop(:a, :optional, :int)])
+      {:ok, %{}}
 
   ## validator
 
@@ -154,6 +163,25 @@ defmodule Paraiso do
       ...> )
       {:error, :a, :invalid}
 
+  ### `:object`
+
+  オブジェクト型であるか検証
+
+  検証に成功した場合: map()が値部分に格納される(キーはatom()に変換されない)
+
+  検証に失敗した場合: `{:error, [<エラーが発生した要素までのパス>], reason}` が返る
+
+      iex> Paraiso.process(
+      ...>   %{"a" => %{"b" => "c"}},
+      ...>   [Paraiso.prop(:a, :required, :object)]
+      ...> )
+      {:ok, %{a: %{"b" => "c"}}}
+      iex> Paraiso.process(
+      ...>   %{"a" => 1},
+      ...>   [Paraiso.prop(:a, :required, :object)]
+      ...> )
+      {:error, :a, :invalid}
+
   ### `{:array, validator()}`
 
   リスト中の要素に対してvalidator()に基づいて検証する
@@ -231,7 +259,7 @@ defmodule Paraiso do
   """
   @spec prop(
           name :: atom(),
-          required_or_optional :: :required | {:optional, default :: term()},
+          required_or_optional :: :required | {:optional, default :: term()} | :optional,
           validator ::
             :boolean
             | nil
@@ -242,6 +270,7 @@ defmodule Paraiso do
             | String.t()
             | {:string_literals, [String.t()]}
             | {:object, [prop()]}
+            | :object
             | {:array, validator()}
             | {:or, [validator()]}
             | {:custom, (value :: term() -> :ok | {:error, reason :: atom()})}
@@ -264,6 +293,7 @@ defmodule Paraiso do
           | String.t()
           | {:string_literals, [String.t()]}
           | {:object, [prop()]}
+          | :object
           | {:array, validator()}
           | {:or, [validator()]}
           | {:custom, (value :: term() -> :ok | {:error, reason :: atom()})}
@@ -271,7 +301,7 @@ defmodule Paraiso do
   @typedoc """
   `prop/3`で宣言して`process/2`で処理される処理内容を表現した中間オブジェクト
   """
-  @opaque prop :: {atom(), :required | {:optional, term()}, term()}
+  @opaque prop :: {atom(), :required | {:optional, term()} | :optional, term()}
 
   @doc """
 
@@ -319,8 +349,14 @@ defmodule Paraiso do
 
       _not_found ->
         case req_or_opt do
-          :required -> {:halt, {:error, name, :required}}
-          {:optional, default} -> {:cont, {:ok, Map.put(acc, name, default)}}
+          :required ->
+            {:halt, {:error, name, :required}}
+
+          {:optional, default} ->
+            {:cont, {:ok, Map.put(acc, name, default)}}
+
+          :optional ->
+            {:cont, {:ok, acc}}
         end
     end
   end
@@ -427,6 +463,14 @@ defmodule Paraiso do
   end
 
   defp process_validator(name, _value, {:object, _specs}, _acc) do
+    {:halt, {:error, name, :invalid}}
+  end
+
+  defp process_validator(name, %{} = value, :object, {:ok, acc}) do
+    {:cont, {:ok, Map.put(acc, name, value)}}
+  end
+
+  defp process_validator(name, _value, :object, _acc) do
     {:halt, {:error, name, :invalid}}
   end
 
