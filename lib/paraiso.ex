@@ -89,6 +89,15 @@ defmodule Paraiso do
       iex> Paraiso.process(%{"a" => "foo"}, [Paraiso.prop(:a, :required, {:int, {:range, 0, 100}})])
       {:error, :a, :invalid}
 
+  ### `:string`
+
+  文字列であるか検証
+
+      iex> Paraiso.process(%{"a" => "a"}, [Paraiso.prop(:a, :required, :string)])
+      {:ok, %{a: "a"}}
+      iex> Paraiso.process(%{"a" => 123}, [Paraiso.prop(:a, :required, :string)])
+      {:error, :a, :invalid}
+
   ### `{:string, {:range, min :: integer(), max :: integer()}}`
 
   長さmin以上max以下の文字列であるか検証
@@ -265,6 +274,7 @@ defmodule Paraiso do
             | nil
             | :int
             | {:int, {:range, min :: integer(), max :: integer()}}
+            | :string
             | {:string, {:range, min :: integer(), max :: integer()}}
             | {:string, {:regex, Regex.t()}}
             | String.t()
@@ -288,6 +298,7 @@ defmodule Paraiso do
           | :int
           | nil
           | {:int, {:range, min :: integer(), max :: integer()}}
+          | :string
           | {:string, {:range, min :: integer(), max :: integer()}}
           | {:string, {:regex, Regex.t()}}
           | String.t()
@@ -400,6 +411,14 @@ defmodule Paraiso do
   end
 
   defp process_validator(name, value, {:int, _validator}, _acc) when not is_integer(value) do
+    {:halt, {:error, name, :invalid}}
+  end
+
+  defp process_validator(name, value, :string, {:ok, acc}) when is_binary(value) do
+    {:cont, {:ok, Map.put(acc, name, value)}}
+  end
+
+  defp process_validator(name, value, :string, _acc) when not is_binary(value) do
     {:halt, {:error, name, :invalid}}
   end
 
