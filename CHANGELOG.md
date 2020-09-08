@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.0.5 (2020-09-08)
+
+* `:string` validator
+
 ## v0.0.4 (2020-09-04)
 
 ### Enhancements

@@ -4,7 +4,7 @@ defmodule Paraiso.MixProject do
   def project do
     [
       app: :paraiso,
-      version: "0.0.4",
+      version: "0.0.5",
       elixir: "~> 1.10",
       deps: deps(),
       package: package(),
