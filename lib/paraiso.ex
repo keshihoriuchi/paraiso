@@ -237,6 +237,42 @@ defmodule Paraiso do
       ...>   [Paraiso.prop(:a, :required, {:or, [:boolean, "foo"]})]
       ...> )
       {:error, :a, :invalid}
+      iex> Paraiso.process(
+      ...>   %{"a" => %{"b" => "c"}},
+      ...>   [
+      ...>     Paraiso.prop(
+      ...>       :a,
+      ...>       :required,
+      ...>       {:or,
+      ...>        [
+      ...>          nil,
+      ...>          {:object,
+      ...>           [
+      ...>             Paraiso.prop(:b, :required, :string)
+      ...>           ]}
+      ...>        ]}
+      ...>     )
+      ...>   ]
+      ...> )
+      {:ok, %{a: %{b: "c"}}}
+      iex> Paraiso.process(
+      ...>   %{"a" => nil},
+      ...>   [
+      ...>     Paraiso.prop(
+      ...>       :a,
+      ...>       :required,
+      ...>       {:or,
+      ...>        [
+      ...>          nil,
+      ...>          {:object,
+      ...>           [
+      ...>             Paraiso.prop(:b, :required, :string)
+      ...>           ]}
+      ...>        ]}
+      ...>     )
+      ...>   ]
+      ...> )
+      {:ok, %{a: nil}}
 
   ### `{:custom, (value :: term() -> :ok | {:error, reason :: atom()})}`
 
@@ -523,20 +559,16 @@ defmodule Paraiso do
 
   defp process_validator(name, value, {:or, validators}, {:ok, acc}) do
     result =
-      Enum.any?(validators, fn validator ->
+      Enum.reduce_while(validators, :unmatched, fn validator, acc ->
         case process_validator(:elem, value, validator, {:ok, %{}}) do
-          {:cont, {:ok, _result}} ->
-            true
-
-          _else ->
-            false
+          {:cont, {:ok, %{elem: result}}} -> {:halt, result}
+          _else -> {:cont, acc}
         end
       end)
 
-    if result do
-      {:cont, {:ok, Map.put(acc, name, value)}}
-    else
-      {:halt, {:error, name, :invalid}}
+    case result do
+      :unmatched -> {:halt, {:error, name, :invalid}}
+      value -> {:cont, {:ok, Map.put(acc, name, value)}}
     end
   end
 
