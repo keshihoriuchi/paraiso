@@ -561,14 +561,14 @@ defmodule Paraiso do
     result =
       Enum.reduce_while(validators, :unmatched, fn validator, acc ->
         case process_validator(:elem, value, validator, {:ok, %{}}) do
-          {:cont, {:ok, %{elem: result}}} -> {:halt, result}
+          {:cont, {:ok, %{elem: result}}} -> {:halt, {:ok, result}}
           _else -> {:cont, acc}
         end
       end)
 
     case result do
+      {:ok, value} -> {:cont, {:ok, Map.put(acc, name, value)}}
       :unmatched -> {:halt, {:error, name, :invalid}}
-      value -> {:cont, {:ok, Map.put(acc, name, value)}}
     end
   end
 
