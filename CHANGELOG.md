@@ -1,6 +1,14 @@
 # CHANGELOG
 
+## v0.0.6 (2020-09-09)
+
+### Bug fixes
+
+* Validators in `:or` validator can' sanitize inner objects
+
 ## v0.0.5 (2020-09-08)
+
+### Enhancements
 
 * `:string` validator
 
