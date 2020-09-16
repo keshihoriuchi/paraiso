@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v0.0.7 (2020-09-16)
+
+### Enhancements
+
+* Sanitize in `:custom` validator
+* List in path of `:custom` error
+
 ## v0.0.6 (2020-09-09)
 
 ### Bug fixes
