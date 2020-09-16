@@ -276,7 +276,11 @@ defmodule Paraiso do
 
   ### `{:custom, (value :: term() -> :ok | {:error, reason :: atom()})}`
 
-  関数で検証する。関数は成功なら`:ok`、失敗なら `{:error, <失敗理由> :: atom()}` を返す
+  関数で検証する。関数の仕様は以下
+  - 成功なら `:ok` を返す
+  - 成功で、バリデーション済みオブジェクトを返したければ `{:ok, <オブジェクト> :: any()}` を返す
+  - 失敗なら `{:error, <失敗理由> :: atom()}` を返す
+  - 失敗で、失敗したパスを返したければ `{:error, <失敗したパス情報> :: atom() | [atom() | integer()], <失敗理由> :: atom()}` を返す
 
       iex> Paraiso.process(
       ...>   %{"a" => 1},
@@ -300,6 +304,39 @@ defmodule Paraiso do
       ...>   ]
       ...> )
       {:error, :a, :invalid}
+      iex> Paraiso.process(
+      ...>   %{"a" => %{"b" => 1}},
+      ...>   [
+      ...>     Paraiso.prop(
+      ...>       :a,
+      ...>       :required,
+      ...>       {:custom, fn %{"b" => v} -> if(v == 1, do: {:ok, %{b: v}}, else: {:error, :b, :invalid}) end}
+      ...>     )
+      ...>   ]
+      ...> )
+      {:ok, %{a: %{b: 1}}}
+      iex> Paraiso.process(
+      ...>   %{"a" => %{"b" => 2}},
+      ...>   [
+      ...>     Paraiso.prop(
+      ...>       :a,
+      ...>       :required,
+      ...>       {:custom, fn %{"b" => v} -> if(v == 1, do: {:ok, %{b: v}}, else: {:error, :b, :invalid}) end}
+      ...>     )
+      ...>   ]
+      ...> )
+      {:error, [:a, :b], :invalid}
+      iex> Paraiso.process(
+      ...>   %{"a" => %{"b" => %{"c" => 2}}},
+      ...>   [
+      ...>     Paraiso.prop(
+      ...>       :a,
+      ...>       :required,
+      ...>       {:custom, fn %{"b" => %{"c" => v}} -> if(v == 1, do: {:ok, %{b: %{c: v}}}, else: {:error, [:b, :c], :invalid}) end}
+      ...>     )
+      ...>   ]
+      ...> )
+      {:error, [:a, :b, :c], :invalid}
 
   """
   @spec prop(
@@ -319,7 +356,12 @@ defmodule Paraiso do
             | :object
             | {:array, validator()}
             | {:or, [validator()]}
-            | {:custom, (value :: term() -> :ok | {:error, reason :: atom()})}
+            | {:custom,
+               (value :: term() ->
+                  :ok
+                  | {:ok, any()}
+                  | {:error, reason :: atom()}
+                  | {:error, atom() | [atom() | integer()], atom()})}
         ) :: prop()
   def prop(name, req_or_opt, validator) do
     {name, req_or_opt, validator}
@@ -343,7 +385,12 @@ defmodule Paraiso do
           | :object
           | {:array, validator()}
           | {:or, [validator()]}
-          | {:custom, (value :: term() -> :ok | {:error, reason :: atom()})}
+          | {:custom,
+             (value :: term() ->
+                :ok
+                | {:ok, any()}
+                | {:error, reason :: atom()}
+                | {:error, atom() | [atom() | integer()], atom()})}
 
   @typedoc """
   `prop/3`で宣言して`process/2`で処理される処理内容を表現した中間オブジェクト
@@ -577,8 +624,17 @@ defmodule Paraiso do
       :ok ->
         {:cont, {:ok, Map.put(acc, name, value)}}
 
+      {:ok, value} ->
+        {:cont, {:ok, Map.put(acc, name, value)}}
+
       {:error, reason} ->
         {:halt, {:error, name, reason}}
+
+      {:error, path, reason} when is_list(path) ->
+        {:halt, {:error, [name | path], reason}}
+
+      {:error, path, reason} ->
+        {:halt, {:error, [name, path], reason}}
 
       _ ->
         raise "Custom function must return `:ok` or `{:error, reason}`"
