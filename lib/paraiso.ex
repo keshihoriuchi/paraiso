@@ -240,7 +240,11 @@ defmodule Paraiso do
 
   ### `{:custom, (value :: term() -> :ok | {:error, reason :: atom()})}`
 
-  関数で検証する。関数は成功なら`:ok`、失敗なら `{:error, <失敗理由> :: atom()}` を返す
+  関数で検証する。
+  - 成功なら `:ok` を返す
+  - 成功で、バリデーション済みオブジェクトを返したければ `{:ok, <オブジェクト> :: any()}` を返す
+  - 失敗なら `{:error, <失敗理由> :: atom()}` を返す
+  - 失敗で、失敗したパスを返したければ `{:error, <失敗したパス情報> :: atom() | [atom() | integer()], <失敗理由> :: atom()}` を返す
 
       iex> Paraiso.process(
       ...>   %{"a" => 1},
