@@ -240,7 +240,7 @@ defmodule Paraiso do
 
   ### `{:custom, (value :: term() -> :ok | {:error, reason :: atom()})}`
 
-  関数で検証する。
+  関数で検証する。関数の仕様は以下
   - 成功なら `:ok` を返す
   - 成功で、バリデーション済みオブジェクトを返したければ `{:ok, <オブジェクト> :: any()}` を返す
   - 失敗なら `{:error, <失敗理由> :: atom()}` を返す
