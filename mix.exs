@@ -4,7 +4,7 @@ defmodule Paraiso.MixProject do
   def project do
     [
       app: :paraiso,
-      version: "0.0.7",
+      version: "0.0.8",
       elixir: "~> 1.10",
       deps: deps(),
       package: package(),
@@ -21,7 +21,7 @@ defmodule Paraiso.MixProject do
   end
 
   defp deps do
-    [{:ex_doc, "~> 0.22", only: :dev, runtime: false}]
+    [{:ex_doc, "~> 0.24", only: :dev, runtime: false}]
   end
 
   defp package() do

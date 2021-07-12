@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.0.8 (2021-07-12)
+
+### Enhancements
+
+* `:string_as_atom` validator
+
 ## v0.0.7 (2020-09-16)
 
 ### Enhancements

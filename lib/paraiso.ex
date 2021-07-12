@@ -148,6 +148,23 @@ defmodule Paraiso do
       iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:string_literals, ["abc", "def"]})])
       {:error, :a, :invalid}
 
+  ### `{:string_as_atom, atom() | [atom()]}`
+
+  いずれかのアトムと一致するか検証。検証に成功した場合、結果の値はアトムとして保持される
+
+      iex> Paraiso.process(%{"a" => "abc"}, [Paraiso.prop(:a, :required, {:string_as_atom, :abc})])
+      {:ok, %{a: :abc}}
+      iex> Paraiso.process(%{"a" => "def"}, [Paraiso.prop(:a, :required, {:string_as_atom, :abc})])
+      {:error, :a, :invalid}
+      iex> Paraiso.process(%{"a" => "abc"}, [Paraiso.prop(:a, :required, {:string_as_atom, [:abc, :def]})])
+      {:ok, %{a: :abc}}
+      iex> Paraiso.process(%{"a" => "def"}, [Paraiso.prop(:a, :required, {:string_as_atom, [:abc, :def]})])
+      {:ok, %{a: :def}}
+      iex> Paraiso.process(%{"a" => "ghi"}, [Paraiso.prop(:a, :required, {:string_as_atom, [:abc, :def]})])
+      {:error, :a, :invalid}
+      iex> Paraiso.process(%{"a" => 1}, [Paraiso.prop(:a, :required, {:string_as_atom, [:abc, :def]})])
+      {:error, :a, :invalid}
+
   ### `{:object, [prop()]}`
 
   対象オブジェクトをvalueとした場合に`Paraiso.process(value, [prop()])`に相当する検証をする
@@ -352,6 +369,7 @@ defmodule Paraiso do
             | {:string, {:regex, Regex.t()}}
             | String.t()
             | {:string_literals, [String.t()]}
+            | {:string_as_atom, atom() | [atom()]}
             | {:object, [prop()]}
             | :object
             | {:array, validator()}
@@ -381,6 +399,7 @@ defmodule Paraiso do
           | {:string, {:regex, Regex.t()}}
           | String.t()
           | {:string_literals, [String.t()]}
+          | {:string_as_atom, atom() | [atom()]}
           | {:object, [prop()]}
           | :object
           | {:array, validator()}
@@ -546,6 +565,21 @@ defmodule Paraiso do
   defp process_validator(name, value, {:string_literals, list}, {:ok, acc}) do
     if :lists.member(value, list) do
       {:cont, {:ok, Map.put(acc, name, value)}}
+    else
+      {:halt, {:error, name, :invalid}}
+    end
+  end
+
+  defp process_validator(name, value, {:string_as_atom, cand}, {:ok, acc}) when is_list(cand) do
+    case Enum.find(cand, fn c -> Atom.to_string(c) == value end) do
+      nil -> {:halt, {:error, name, :invalid}}
+      c -> {:cont, {:ok, Map.put(acc, name, c)}}
+    end
+  end
+
+  defp process_validator(name, value, {:string_as_atom, cand}, {:ok, acc}) when is_atom(cand) do
+    if Atom.to_string(cand) == value do
+      {:cont, {:ok, Map.put(acc, name, cand)}}
     else
       {:halt, {:error, name, :invalid}}
     end
